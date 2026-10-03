@@ -1,0 +1,49 @@
+# Easiest path: `docker compose up -d --build`, then open http://localhost:4202
+# and CREATE a dashboard password (12+ chars). Then complete Microsoft login.
+name: mc-headless-improved
+
+services:
+  mc:
+    build: .
+    image: mc-headless-improved:latest
+    container_name: mc-headless
+    restart: unless-stopped
+    cpus: 2.0
+    mem_limit: 3g
+    ports:
+      # Loopback only — use an SSH tunnel on remote hosts, never expose directly.
+      - "127.0.0.1:4202:3000"
+    volumes:
+      - mc-data:/data
+      - mc-dashboard:/app/data
+    env_file:
+      # Optional: setup.sh creates .env from .env.example, but a missing file
+      # must not break `docker compose up` for users who configure via
+      # environment: below / shell exports instead.
+      - path: .env
+        required: false
+    environment:
+      # Single source of truth for the game version (no hidden hardcodes).
+      MC_VERSION: ${MC_VERSION:-1.21.11}
+      MC_LOADER: ${MC_LOADER:-fabric}
+      MC_XMX: ${MC_XMX:-1280M}
+      HMC_LOGIN_TIMEOUT: ${HMC_LOGIN_TIMEOUT:-600}
+      # Leave 0 normally. 1 skips Microsoft login (dashboard-only testing).
+      HMC_SKIP_LOGIN: ${HMC_SKIP_LOGIN:-0}
+      # 1 keeps lean software-rendering settings enforced (recommended).
+      HMC_LEAN_GFX: ${HMC_LEAN_GFX:-1}
+      # 1 forces the -lwjgl stub instead of Xvfb (not recommended).
+      HMC_NO_XVFB: ${HMC_NO_XVFB:-0}
+      PORT: 3000
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  mc-data:
+    name: mc-data
+  mc-dashboard:
+    name: mc-dashboard

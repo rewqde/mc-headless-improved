@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0c0e14">
+<title>mc-headless</title>
+<style>
+:root{
+  --bg:#0c0e14;
+  --glass:rgba(255,255,255,.04);
+  --surface2:rgba(255,255,255,.06);
+  --border:rgba(255,255,255,.08);
+  --text:#f0f2f8;--text2:#a0a8b8;--text3:#6c7388;
+  --accent:#404ebf;--accent2:#5563d1;--glow:rgba(64,78,191,.25);
+  --up:#34d399;--down:#f87171;--warn:#fbbf24;
+  --font:'DM Sans',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --radius:12px;
+}
+*{box-sizing:border-box}
+html{color-scheme:dark;scroll-behavior:smooth}
+body{
+  margin:0;min-height:100vh;
+  background:var(--bg);
+  background-image:
+    radial-gradient(ellipse at 15% -10%,rgba(64,78,191,.14),transparent 50%),
+    radial-gradient(ellipse at 90% 110%,rgba(64,78,191,.08),transparent 45%);
+  color:var(--text);font-family:var(--font);font-size:14px;line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+button,input{font-family:inherit;font-size:inherit;color:inherit}
+.app{display:flex;min-height:100vh}
+.sidebar{
+  width:64px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:16px 0;border-right:1px solid var(--border);
+  background:rgba(12,14,20,.7);backdrop-filter:blur(16px);
+  position:sticky;top:0;height:100vh;z-index:20;
+}
+.sidebar .brand-mark{
+  width:38px;height:38px;border-radius:10px;background:var(--accent);
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono);
+  font-weight:700;font-size:15px;color:#fff;margin-bottom:10px;
+  box-shadow:0 0 16px var(--glow);overflow:hidden;
+}
+.sidebar .brand-mark img{width:32px;height:32px;border-radius:8px}
+.nav{display:flex;flex-direction:column;gap:4px;width:100%;align-items:center}
+.nav a{
+  width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+  color:var(--text3);text-decoration:none;font-size:11px;font-weight:600;letter-spacing:.02em;
+  transition:background .15s,color .15s;writing-mode:vertical-rl;
+}
+.nav a:hover{background:var(--surface2);color:var(--text)}
+.nav a.active{background:var(--surface2);color:var(--accent2)}
+.wrap{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:16px 32px;border-bottom:1px solid var(--border);
+  background:rgba(12,14,20,.7);backdrop-filter:blur(16px);
+  position:sticky;top:0;z-index:10;
+}
+.brand h1{margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em}
+.brand .ver{color:var(--text3);font-weight:500;font-size:14px;font-family:var(--mono)}
+.eyebrow{display:block;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:4px}
+.pill{background:var(--surface2);border:1px solid var(--border);padding:4px 12px;border-radius:12px;font-size:12px;font-weight:500;display:inline-flex;align-items:center;gap:8px}
+.pill::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--text3)}
+.pill.ok::before{background:var(--up);box-shadow:0 0 6px var(--up);animation:pulse 2s infinite}
+.pill.warn::before{background:var(--warn)}
+.pill.off::before{background:var(--text3)}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+main{padding:24px 32px 48px;max-width:1100px;margin:0 auto;width:100%}
+.login-banner{border-color:rgba(85,99,209,.5);box-shadow:0 0 24px var(--glow);margin-bottom:16px;text-align:center}
+.login-banner .code{font-family:var(--mono);font-size:40px;font-weight:700;letter-spacing:.2em;color:#fff;margin:10px 0}
+.login-banner a{color:var(--accent2);word-break:break-all}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.span-2{grid-column:span 2}
+.card{
+  background:var(--glass);backdrop-filter:blur(12px);
+  border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;scroll-margin-top:80px;
+}
+.card>header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px}
+.card>header strong{font-size:15px;font-weight:600}
+input[type=text],input[type=number],input[type=password]{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);outline:none;width:100%}
+input:focus{border-color:var(--accent)}
+.btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:9px 16px;border-radius:8px;font-weight:500;cursor:pointer;transition:background .15s}
+.btn:hover{background:var(--border)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent2)}
+.btn-danger{border-color:rgba(248,113,113,.4);color:var(--down)}
+.btn-danger:hover{background:rgba(248,113,113,.1)}
+.btn:disabled{opacity:.5;cursor:default}
+.form-row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.form-row input{flex:1;min-width:90px}
+.field{flex:1;min-width:90px}
+.field label{font-size:12px;color:var(--text3);display:block;margin-bottom:4px}
+.note{color:var(--text3);font-size:12px;margin:10px 0 0}
+.dpad{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;width:min(100%,240px);margin:0 auto}
+.dpad .btn{padding:10px 0}
+.dpad .spacer{height:1px}
+.orient{border-top:1px solid var(--border);margin-top:12px;padding-top:12px}
+.metric-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.metric-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+.metric-card .label{font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase}
+.metric-card strong{display:block;font-family:var(--mono);font-size:20px;font-weight:600;margin-top:4px}
+.metric-card .age{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.inv{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.inv-item{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:13px}
+.inv-item b{font-family:var(--mono);color:var(--accent2)}
+.muted{color:var(--text3);font-size:13px;padding:16px;text-align:center;background:var(--bg);border:1px dashed var(--border);border-radius:8px}
+.logs-group{display:flex;flex-direction:column;gap:12px}
+.logs-group details{background:var(--bg);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.logs-group summary{
+  cursor:pointer;padding:10px 14px;font-size:12px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text2);list-style:none;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.logs-group summary::-webkit-details-marker{display:none}
+.logs-group summary::after{content:'+';font-family:var(--mono);color:var(--text3)}
+.logs-group details[open] summary::after{content:'−'}
+.logs{background:var(--bg);border-top:1px solid var(--border);padding:12px;height:220px;overflow:auto;font-family:var(--mono);font-size:12px;white-space:pre-wrap;color:var(--text2);margin:0}
+#toast{
+  position:fixed;bottom:20px;right:20px;background:var(--surface2);
+  border:1px solid var(--down);color:var(--down);padding:10px 16px;border-radius:8px;font-size:13px;
+  opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none;z-index:99;
+  max-width:min(420px,calc(100vw - 40px));
+}
+#toast.show{opacity:1;transform:translateY(0)}
+#toast.ok{border-color:var(--up);color:var(--up)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@media(max-width:900px){
+  .sidebar{width:52px}
+  .grid{grid-template-columns:1fr}
+  .span-2{grid-column:span 1}
+  main{padding:16px}
+  .topbar{padding:16px}
+  .metric-grid{grid-template-columns:repeat(2,1fr)}
+  .nav a{width:38px;height:38px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand-mark">M</div>
+    <nav class="nav">
+      <a href="#section-connect" class="active">Connect</a>
+      <a href="#section-script">Script</a>
+      <a href="#section-move">Move</a>
+      <a href="#section-chat">Chat</a>
+      <a href="#section-telemetry">Telemetry</a>
+      <a href="#section-logs">Logs</a>
+    </nav>
+  </aside>
+
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <span class="eyebrow">Control panel</span>
+        <h1>mc-headless <span class="ver" id="ver-label">…</span></h1>
+      </div>
+      <div class="topbar-actions">
+        <span id="status-pill" class="pill off">connecting…</span>
+        <button class="btn" id="logout-btn" title="Log out this browser">Logout</button>
+      </div>
+    </div>
+
+    <main>
+      <div class="card login-banner" id="login-banner" hidden>
+        <span class="eyebrow">Microsoft login</span>
+        <strong id="ms-title">Sign in required</strong>
+        <div class="code" id="login-code">------</div>
+        <div id="ms-help">Open the link, enter the code, and sign in with the Minecraft-owning Microsoft account.</div>
+        <div style="margin:8px 0"><a id="login-link" href="#" target="_blank" rel="noopener"></a></div>
+        <div class="note" id="ms-expiry"></div>
+        <div class="form-row" style="justify-content:center;margin-top:8px">
+          <button class="btn" id="copy-btn">Copy code</button>
+          <button class="btn" id="retry-btn">Retry login</button>
+        </div>
+        <p class="note">Codes expire (~15 min). Retry issues a fresh one — no container restart needed. Never share codes publicly.</p>
+      </div>
+
+      <div class="grid">
+        <section class="card" id="section-connect">
+          <header><span class="eyebrow">Server</span><strong>Connect</strong></header>
+          <form id="connect-form" class="form-row">
+            <div class="field"><label>Host</label><input type="text" id="host" value="" placeholder="play.example.com" autocomplete="off"></div>
+            <div class="field" style="max-width:110px"><label>Port</label><input type="number" id="port" value="25565" min="1" max="65535"></div>
+            <button class="btn btn-primary" type="submit">Connect</button>
+          </form>
+          <div class="form-row" style="margin-top:8px">
+            <button class="btn btn-danger" id="disconnect-btn">Disconnect</button>
+          </div>
+          <p class="note" id="target-note">Joins the server live — no restart needed. Only use servers whose rules allow this.</p>
+        </section>
+
+        <section class="card" id="section-script">
+          <header><span class="eyebrow">Automation</span><strong>Script</strong></header>
+          <div class="form-row">
+            <button class="btn btn-primary" id="start-btn">Start afk.py</button>
+            <button class="btn" id="stop-btn">Stop</button>
+          </div>
+          <p class="note">Start rejoins the server so autorun takes effect. AFK holds sneak+attack+use in place — it never wanders off.</p>
+        </section>
+
+        <section class="card" id="section-move">
+          <header><span class="eyebrow">Input</span><strong>Move</strong></header>
+          <div class="dpad">
+            <span class="spacer"></span><button class="btn" data-dir="forward">Forward</button><span class="spacer"></span>
+            <button class="btn" data-dir="left">Left</button><span class="spacer"></span><button class="btn" data-dir="right">Right</button>
+            <span class="spacer"></span><button class="btn" data-dir="back">Back</button><span class="spacer"></span>
+          </div>
+          <div class="form-row" style="justify-content:center;margin-top:8px">
+            <button class="btn" data-dir="jump">Jump</button>
+            <button class="btn" data-dir="sneak">Sneak</button>
+            <button class="btn" data-dir="stop">Stop</button>
+          </div>
+          <div class="orient form-row">
+            <div class="field"><label>Yaw (-180…180)</label><input type="number" id="yaw" step="any" value="0" min="-180" max="180"></div>
+            <div class="field"><label>Pitch (-90…90)</label><input type="number" id="pitch" step="any" value="0" min="-90" max="90"></div>
+            <button class="btn btn-primary" id="look-btn">Look</button>
+          </div>
+          <p class="note">Tip: WASD + Space move, Q sneaks. Look queues a turn for the look supervisor.</p>
+        </section>
+
+        <section class="card" id="section-chat">
+          <header><span class="eyebrow">Chat</span><strong>Send message</strong></header>
+          <form id="chat-form" class="form-row">
+            <input type="text" id="msg" placeholder="Message the server…" maxlength="256" autocomplete="off">
+            <button class="btn btn-primary" type="submit">Send</button>
+          </form>
+          <div class="orient form-row">
+            <div class="field"><label>New dashboard password (12+ chars)</label><input type="password" id="newpw" autocomplete="new-password"></div>
+            <button class="btn" id="changepw-btn">Change</button>
+          </div>
+          <p class="note">Changing the password logs out all browsers immediately.</p>
+        </section>
+
+        <section class="card span-2" id="section-telemetry">
+          <header><span class="eyebrow">Live</span><strong>Telemetry <span class="age" id="t-age"></span></strong></header>
+          <div class="muted" id="telemetry-placeholder">No telemetry yet — join a world and run \telemetry</div>
+          <div id="telemetry-data">
+            <div class="metric-grid">
+              <div class="metric-card"><span class="label">X</span><strong id="t-x">—</strong></div>
+              <div class="metric-card"><span class="label">Y</span><strong id="t-y">—</strong></div>
+              <div class="metric-card"><span class="label">Z</span><strong id="t-z">—</strong></div>
+              <div class="metric-card"><span class="label">Yaw</span><strong id="t-yaw">—</strong></div>
+              <div class="metric-card"><span class="label">Pitch</span><strong id="t-pitch">—</strong></div>
+              <div class="metric-card"><span class="label">Health</span><strong id="t-health">—</strong></div>
+            </div>
+            <span class="eyebrow" style="margin-top:16px">Inventory</span>
+            <div class="inv" id="inv"></div>
+          </div>
+        </section>
+
+        <section class="card span-2" id="section-logs">
+          <header><span class="eyebrow">Output</span><strong>Logs</strong></header>
+          <div class="logs-group">
+            <details open>
+              <summary>Game</summary>
+              <pre class="logs" id="logs-game">loading…</pre>
+            </details>
+            <details open>
+              <summary>Entrypoint</summary>
+              <pre class="logs" id="logs-entrypoint">loading…</pre>
+            </details>
+            <details>
+              <summary>Dashboard</summary>
+              <pre class="logs" id="logs-dashboard">loading…</pre>
+            </details>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+
+function toast(msg, ok) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.toggle('ok', !!ok);
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+// Escape server-controlled strings before injecting into HTML (anti-XSS).
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+// --- session login (cookie-based, brute-force protected server-side) ---
+let loginOverlay = null;
+async function showPasswordLogin() {
+  if (loginOverlay) return loginOverlay.promise;
+  let setup = false;
+  try {
+    const r = await fetch('/api/auth-check', { cache: 'no-store' });
+    if (!r.ok) throw new Error('auth check failed');
+    const state = await r.json();
+    if (state.authed) return true;
+    setup = state.configured === false;
+  } catch {
+    toast('Could not check dashboard login. Reload to try again.');
+    return false;
+  }
+  if (loginOverlay) return loginOverlay.promise;
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(10,10,16,.82);display:flex;align-items:center;justify-content:center;z-index:9999;backdrop-filter:blur(4px)';
+  wrap.innerHTML =
+    '<form style="background:#181824;border:1px solid #2a2a3a;border-radius:14px;padding:28px;width:min(340px,calc(100vw - 32px));box-sizing:border-box;display:flex;flex-direction:column;gap:12px;box-shadow:0 18px 60px rgba(0,0,0,.5)">' +
+      '<div style="font-size:18px;font-weight:700;color:#fff;text-align:center">mc-headless</div>' +
+      '<div style="font-size:12px;color:#9a9ab0;text-align:center">' + (setup ? 'Create a password for this instance (12+ chars). Keep it private.' : 'Dashboard password required') + '</div>' +
+      '<input type="password" placeholder="Password" autocomplete="' + (setup ? 'new-password' : 'current-password') + '" required style="background:#101018;border:1px solid #33334a;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px;outline:none" />' +
+      (setup ? '<input type="password" placeholder="Confirm password" autocomplete="new-password" required style="background:#101018;border:1px solid #33334a;border-radius:8px;padding:10px 12px;color:#fff;font-size:14px" />' : '') +
+      '<div class="err" style="color:#ff6b6b;font-size:12px;min-height:14px;text-align:center"></div>' +
+      '<button type="submit" style="background:#5b5bf0;border:0;border-radius:8px;padding:10px;color:#fff;font-weight:600;cursor:pointer">' + (setup ? 'Create password' : 'Log in') + '</button>' +
+    '</form>';
+  const input = wrap.querySelector('input');
+  const err = wrap.querySelector('.err');
+  const box = {};
+  loginOverlay = box;
+  box.promise = new Promise((resolve) => {
+    wrap.querySelector('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      err.textContent = '';
+      try {
+        if (setup) {
+          const confirm = wrap.querySelectorAll('input')[1].value;
+          if (input.value !== confirm) { err.textContent = 'Passwords do not match'; return; }
+          if (input.value.length < 12) { err.textContent = 'Use at least 12 characters'; return; }
+          const created = await fetch('/api/setup', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: input.value })
+          });
+          if (!created.ok) {
+            const d = await created.json().catch(() => ({}));
+            err.textContent = d.error || 'Could not create password';
+            if (created.status === 403) err.textContent = 'Already configured. Reload and log in.';
+            return;
+          }
+          wrap.remove(); loginOverlay = null;
+          toast('Password created — you are logged in', true);
+          return resolve(true);
+        }
+        const r = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: input.value })
+        });
+        if (r.ok) { wrap.remove(); loginOverlay = null; return resolve(true); }
+        const d = await r.json().catch(() => ({}));
+        if (r.status === 429) err.textContent = 'Locked out — try again in ' + Math.ceil((d.retry_after_sec || 900) / 60) + ' min';
+        else err.textContent = 'Wrong password';
+      } catch { err.textContent = 'Network error'; }
+      input.value = '';
+      input.focus();
+    });
+  });
+  document.body.appendChild(wrap);
+  input.focus();
+  return box.promise;
+}
+async function apiFetch(url, opts) {
+  let r = await fetch(url, opts);
+  if (r.status !== 401) return r;
+  const ok = await showPasswordLogin();
+  if (!ok) return r;
+  r = await fetch(url, opts);
+  return r;
+}
+fetch('/api/auth-check').then(r => r.json()).then(d => { if (!d.authed) showPasswordLogin(); }).catch(() => {});
+
+async function post(url, body) {
+  const r = await apiFetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  let d = {};
+  try { d = await r.json(); } catch (e) {}
+  if (!r.ok) throw new Error(d.error || d.message || ('HTTP ' + r.status));
+  return d;
+}
+
+// --- status pill + Microsoft banner (structured auth-status, countdown) ---
+let msExpiresAt = null;
+async function pollStatus() {
+  let d;
+  try {
+    const r = await apiFetch('/api/status');
+    if (!r.ok) return;
+    d = await r.json();
+  } catch (e) { return; }
+  const p = $('status-pill');
+  $('ver-label').textContent = d.version || '';
+  if (d.target) $('target-note').textContent = 'Current target: ' + d.target + ' — Connect updates it live.';
+  if (d.running) {
+    p.textContent = 'running · ' + (d.version || '');
+    p.className = 'pill ok';
+  } else if (d.loginPending) {
+    p.textContent = 'login pending';
+    p.className = 'pill warn';
+  } else {
+    p.textContent = 'stopped';
+    p.className = 'pill off';
+  }
+  if (d.loginPending || (d.ms && !d.ms.authenticated)) showMsLogin();
+  else hideMsLogin();
+}
+
+async function showMsLogin() {
+  try {
+    const r = await apiFetch('/api/auth-status');
+    if (!r.ok) return hideMsLogin();
+    const d = await r.json();
+    if (d.authenticated || (!d.code && d.status !== 'expired' && d.status !== 'failed')) {
+      // No code to show (waiting for entrypoint / already done) — keep a hint.
+      if (d.authenticated) return hideMsLogin();
+      $('ms-title').textContent = 'Preparing Microsoft login…';
+      $('login-code').textContent = '···';
+      $('login-link').textContent = '';
+      $('ms-expiry').textContent = d.message || 'Starting the login — a code appears in seconds.';
+      $('login-banner').hidden = false;
+      return;
+    }
+    $('ms-title').textContent = d.status === 'expired' ? 'Code expired — use Retry' : 'Sign in required';
+    $('login-code').textContent = d.code || '------';
+    const link = $('login-link');
+    link.href = d.fullUrl || d.url || '#';
+    link.textContent = d.url || d.fullUrl || '';
+    msExpiresAt = d.expires_in_sec != null ? Date.now() + d.expires_in_sec * 1000 : null;
+    tickExpiry();
+    $('login-banner').hidden = false;
+  } catch (e) {}
+}
+function tickExpiry() {
+  if (msExpiresAt == null) { $('ms-expiry').textContent = ''; return; }
+  const s = Math.max(0, Math.round((msExpiresAt - Date.now()) / 1000));
+  $('ms-expiry').textContent = s > 0 ? 'Code expires in ~' + Math.floor(s / 60) + 'm ' + (s % 60) + 's' : 'Code expired — press Retry login';
+}
+setInterval(tickExpiry, 1000);
+
+function hideMsLogin() { $('login-banner').hidden = true; }
+
+// --- connect ---
+$('connect-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const host = $('host').value.trim();
+  if (!host) { toast('Enter a server host'); return; }
+  try {
+    const d = await post('/api/connect', { host, port: Number($('port').value) || 25565 });
+    toast('Connecting to ' + d.target + '…', true);
+  } catch (err) { toast(err.message); }
+};
+
+// --- disconnect ---
+$('disconnect-btn').onclick = async () => {
+  const b = $('disconnect-btn');
+  b.disabled = true;
+  try {
+    await post('/api/disconnect');
+    toast('Disconnected', true);
+  } catch (err) { toast(err.message); }
+  b.disabled = false;
+};
+
+// --- script ---
+$('start-btn').onclick = async () => {
+  const b = $('start-btn');
+  b.disabled = true;
+  try {
+    await post('/api/script', { name: 'afk' });
+    toast('afk.py started', true);
+  } catch (err) { toast(err.message); }
+  b.disabled = false;
+};
+
+$('stop-btn').onclick = async () => {
+  const b = $('stop-btn');
+  b.disabled = true;
+  try {
+    await post('/api/script', { name: 'afk', action: 'stop' });
+    toast('afk.py stopped', true);
+  } catch (err) { toast(err.message); }
+  b.disabled = false;
+};
+
+// --- move (click + WASD keyboard) ---
+document.querySelectorAll('[data-dir]').forEach((b) => {
+  b.onclick = () => post('/api/move', { dir: b.dataset.dir }).catch((e) => toast(e.message));
+});
+const KEYMAP = { w: 'forward', a: 'left', s: 'back', d: 'right', ' ': 'jump', q: 'sneak' };
+document.addEventListener('keydown', (e) => {
+  if (/INPUT|TEXTAREA/.test(document.activeElement?.tagName || '')) return;
+  const dir = KEYMAP[e.key.toLowerCase()];
+  if (dir) post('/api/move', { dir }).catch((err) => toast(err.message));
+});
+$('look-btn').onclick = () => {
+  const yaw = Number($('yaw').value), pitch = Number($('pitch').value);
+  if (!Number.isFinite(yaw) || !Number.isFinite(pitch)) { toast('Yaw/pitch must be numbers'); return; }
+  post('/api/move', { yaw, pitch })
+    .then((d) => toast(d.applied === false ? 'Look queued (needs look supervisor)' : 'Looking…', true))
+    .catch((e) => toast(e.message));
+};
+
+// --- chat ---
+$('chat-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const m = $('msg').value.trim();
+  if (!m) return;
+  try {
+    await post('/api/chat', { msg: m });
+    $('msg').value = '';
+    toast('Sent', true);
+  } catch (err) { toast(err.message); }
+};
+
+// --- change password + logout ---
+$('changepw-btn').onclick = async () => {
+  const np = $('newpw').value;
+  if (np.length < 12) { toast('Use at least 12 characters'); return; }
+  const cur = prompt('Enter your CURRENT dashboard password:');
+  if (cur == null) return;
+  try {
+    await post('/api/change-password', { current: cur, password: np });
+    $('newpw').value = '';
+    toast('Password changed — log in again', true);
+    showPasswordLogin();
+  } catch (err) { toast(err.message); }
+};
+$('logout-btn').onclick = async () => {
+  try { await post('/api/logout'); } catch (e) {}
+  showPasswordLogin();
+};
+
+// --- Microsoft retry / copy ---
+$('retry-btn').onclick = async () => {
+  const b = $('retry-btn');
+  b.disabled = true;
+  try {
+    const d = await post('/api/auth-retry');
+    toast(d.message || 'Retry requested', true);
+    setTimeout(showMsLogin, 6000);
+  } catch (err) { toast(err.message); }
+  b.disabled = false;
+};
+$('copy-btn').onclick = () => {
+  const c = $('login-code').textContent.trim();
+  if (!c || c === '------' || c === '···') return;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(c).then(() => toast('Copied', true)).catch(() => toast('Copy failed'));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = c; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('Copied', true); } catch { toast('Copy failed'); }
+    ta.remove();
+  }
+};
+
+// --- telemetry (with age + XSS-safe inventory) ---
+async function pollTelemetry() {
+  try {
+    const r = await apiFetch('/api/telemetry');
+    if (!r.ok) throw new Error('no telemetry');
+    const d = await r.json();
+    $('telemetry-placeholder').hidden = true;
+    $('telemetry-data').hidden = false;
+    $('t-x').textContent = d.x ?? '—';
+    $('t-y').textContent = d.y ?? '—';
+    $('t-z').textContent = d.z ?? '—';
+    $('t-yaw').textContent = d.yaw ?? '—';
+    $('t-pitch').textContent = d.pitch ?? '—';
+    $('t-health').textContent = d.health ?? '—';
+    $('t-age').textContent = d.age_sec != null ? (d.age_sec < 10 ? '· live' : '· ' + d.age_sec + 's ago') : '';
+    const inv = d.inventory || [];
+    $('inv').innerHTML = inv.slice(0, 12).map((i) =>
+      '<div class="inv-item"><span>' + esc(i.name) + '</span><b>' + esc(i.count) + '</b></div>'
+    ).join('') || '<span class="muted" style="padding:8px">empty</span>';
+  } catch (e) {
+    $('telemetry-data').hidden = true;
+    $('telemetry-placeholder').hidden = false;
+  }
+}
+
+// --- logs ---
+function setLog(id, val) {
+  $(id).textContent = (val && val.length) ? val : 'no logs yet';
+}
+
+async function pollLogs() {
+  try {
+    const r = await apiFetch('/api/logs?lines=200');
+    if (!r.ok) return;
+    const d = await r.json();
+    setLog('logs-game', d.game);
+    setLog('logs-entrypoint', d.entrypoint);
+    setLog('logs-dashboard', d.dashboard);
+  } catch (e) {}
+}
+
+// --- nav highlight ---
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav a');
+window.addEventListener('scroll', () => {
+  let cur = sections[0];
+  for (const s of sections) if (s.getBoundingClientRect().top <= 120) cur = s;
+  navLinks.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + cur.id));
+}, { passive: true });
+
+// --- init (backoff on failure so a dead backend doesn't spam) ---
+let failCount = 0;
+async function tick() {
+  try { await pollStatus(); failCount = 0; }
+  catch { failCount++; }
+  setTimeout(tick, failCount > 3 ? 15000 : 5000);
+}
+pollStatus();
+pollTelemetry();
+pollLogs();
+setInterval(pollTelemetry, 3000);
+setInterval(pollLogs, 5000);
+tick();
+</script>
+</body>
+</html>
